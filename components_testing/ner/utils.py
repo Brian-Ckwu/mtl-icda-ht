@@ -1,6 +1,18 @@
 import torch
+import random
+import numpy as np
 from tqdm import tqdm
 from colorama import Fore, Style
+
+def same_seeds(seed):
+    random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  
+    np.random.seed(seed)  
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
 
 def trainer(train_loader, val_loader, model, criterion, config, device):
     optimizer = getattr(torch.optim, config["optimizer"])(model.parameters(), **config["optimizer_hparams"])
@@ -39,7 +51,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
                 # save best model
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
-                    torch.save(model.state_dict(), config["model_save_path"])
+                    torch.save(model.state_dict(), "./models/" + config["model_save_name"])
                     print(f"Best model saved (step = {step}, acc = {val_acc:.4f})")
             
             step += 1
@@ -56,7 +68,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
 
         if epoch_val_acc > best_val_acc:
             best_val_acc = epoch_val_acc
-            torch.save(model.state_dict(), config["model_save_path"])
+            torch.save(model.state_dict(), "./models/" + config["model_save_name"])
             print(f"Best model saved (epoch = {epoch:2d}, acc = {best_val_acc:.4f})")
     
     return record
