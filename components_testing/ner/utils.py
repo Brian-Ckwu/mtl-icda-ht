@@ -51,7 +51,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
                 # save best model
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
-                    torch.save(model.state_dict(), "./models/" + config["model_save_name"])
+                    torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
                     print(f"Best model saved (step = {step}, acc = {val_acc:.4f})")
             
             step += 1
@@ -68,7 +68,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
 
         if epoch_val_acc > best_val_acc:
             best_val_acc = epoch_val_acc
-            torch.save(model.state_dict(), "./models/" + config["model_save_name"])
+            torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
             print(f"Best model saved (epoch = {epoch:2d}, acc = {best_val_acc:.4f})")
     
     return record

@@ -7,5 +7,5 @@
         "lr": 5e-5
     },
     "checkpoint_steps": 100,
-    "model_save_name": "seed-7_batchsize-16_lr5e-5.pth"
+    "model_save_name": "seed-7_batchsize-16_lr5e-5_2"
 }
