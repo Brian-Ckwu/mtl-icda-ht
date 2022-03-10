@@ -1,0 +1,10 @@
+{
+    "n_epochs": 5,
+    "batch_size": 8,
+    "optimizer": "Adam",
+    "optimizer_hparams": {
+        "lr": 3e-5
+    },
+    "checkpoint_steps": 100,
+    "model_save_path": "./models/test_model.pth"
+}

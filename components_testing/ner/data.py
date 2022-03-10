@@ -1,10 +1,6 @@
-import json
-from multiprocessing.sharedctypes import Value
 import torch
 from torch.utils.data import Dataset
-from transformers import BertTokenizerFast, DataCollatorWithPadding
-import pandas as pd
-import numpy as np
+from transformers import BertTokenizerFast
 
 # input: emrs (strings), labels (sets of indices)
 # output: emrs (tokenized tensors), labels (NER tensors)
