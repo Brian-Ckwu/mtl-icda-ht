@@ -46,7 +46,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
             step += 1
         
         # evaluate model every epoch
-        print("===== Evaluting model at epoch {}... =====".format(epoch))
+        print("===== Evaluting model at epoch {} =====".format(epoch))
         best_val_acc = update_evaluation(val_loader, model, criterion, config, device, record, best_val_acc)
     
     record["best_val_acc"] = best_val_acc

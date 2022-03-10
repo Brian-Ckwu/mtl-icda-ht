@@ -1,3 +1,5 @@
 *.ipynb
 *.pth
+*pycache*
+eval_results
 models
