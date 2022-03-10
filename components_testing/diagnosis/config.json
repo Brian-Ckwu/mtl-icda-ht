@@ -1,0 +1,14 @@
+{
+  "n_epochs": 5,
+  "batch_size": 16,
+  "model_config": {
+      "model_name": "bert-base-uncased",
+      "embed_size": 768,
+      "label_size": 109
+  }, 
+  "optimizer": "Adam",
+  "optimizer_hparams": {
+      "lr": 2e-5
+  },
+  "model_save_path": "./models/bert_classification_batch-16_lr2e-5.pth"
+}
