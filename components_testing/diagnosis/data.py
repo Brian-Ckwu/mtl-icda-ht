@@ -1,5 +1,6 @@
 import json
 from multiprocessing.sharedctypes import Value
+from typing import Iterable
 import torch
 from torch.utils.data import Dataset
 from transformers import BertTokenizerFast
@@ -49,15 +50,15 @@ def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int
 
     return indices
 
-def even_split_by_labels(data, mode):
+def split_by_div(data: Iterable, fold: int, mode: str) -> list:
     data_l = list()
-    for i, row in enumerate(data):
+    for i, item in enumerate(data):
         if mode == "train":
-            if i % 5 != 0:
-                data_l.append(row)
+            if i % fold != 0:
+                data_l.append(item)
         elif mode == "val":
-            if i % 5 == 0:
-                data_l.append(row)
+            if i % fold == 0:
+                data_l.append(item)
         else:
             raise ValueError("mode should be either train or val")
-    return np.array(data_l)
+    return data_l
