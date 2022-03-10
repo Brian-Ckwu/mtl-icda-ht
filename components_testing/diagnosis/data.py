@@ -26,6 +26,29 @@ class MedicalDiagnosisDataset(Dataset):
         y = torch.LongTensor(dx)        
         return x, y
 
+def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int]:
+    # utility functions
+    def get_converted_icd(icd):
+        return str(icd) if full_code else str(icd)[:3]
+
+    def get_icd_idx_mapping():
+        icd2idx = dict()
+        for icd in icds:
+            icd = get_converted_icd(icd)
+            if icd not in icd2idx:
+                icd2idx[icd] = len(icd2idx)
+        return icd2idx
+    
+    # conversion
+    icd2idx = get_icd_idx_mapping()
+    indices = list()
+    for icd in icds:
+        icd = get_converted_icd(icd)
+        idx = icd2idx[icd]
+        indices.append(idx)
+
+    return indices
+
 def even_split_by_labels(data, mode):
     data_l = list()
     for i, row in enumerate(data):
