@@ -24,8 +24,23 @@ class MedicalDiagnosisDataset(Dataset):
         # transform
         x = self.tokenizer(emr, truncation=True, verbose=False).convert_to_tensors(tensor_type="pt", prepend_batch_axis=False)
         # target transform
-        y = torch.LongTensor(dx)        
+        y = torch.LongTensor([dx])        
         return x, y
+
+class DxBatchCollator(object):
+    def __init__(self, tokenizer: BertTokenizerFast):
+        self.tokenizer = tokenizer
+    
+    def __call__(self, batch):
+        batch_x = list()
+        batch_y = torch.LongTensor()
+
+        for x, y in batch:
+            batch_x.append(x)
+            batch_y = torch.cat(tensors=(batch_y, y), dim=0)
+        batch_x = self.tokenizer.pad(batch_x)
+
+        return batch_x, batch_y
 
 def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int]:
     # utility functions
