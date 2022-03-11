@@ -38,6 +38,37 @@ class MTLDiagnosisNERDataset(Dataset):
 
         return encoded_emr, y_dx, y_ner
 
+class DxNERBatchCollator(object):
+    def __init__(self, tokenizer: BertTokenizerFast, ignore_index: int = -100):
+        self.tokenizer = tokenizer
+        self.ignore_index = ignore_index
+    
+    def __call__(self, batch):
+        batch_x = list()
+        batch_y_dx = list()
+        batch_y_ner = list()
+
+        # make the batch
+        for x, y_dx, y_ner in batch:
+            batch_x.append(x)
+            batch_y_dx.append(y_dx.cpu().detach().item())
+            batch_y_ner.append(y_ner)
+        
+        # handle x & y_dx
+        batch_x = self.tokenizer.pad(batch_x)
+        batch_y_dx = torch.LongTensor(batch_y_dx)
+
+        # handle y_ner
+        dim_after_padding = batch_x["input_ids"].shape[1]
+        for i in range(len(batch_y_ner)):
+            to_fill_length = dim_after_padding - batch_y_ner[i].shape[0]
+            padding = torch.ones(to_fill_length, dtype=torch.long) * self.ignore_index
+            batch_y_ner[i] = torch.cat((batch_y_ner[i], padding), dim=0)
+
+        batch_y_ner = torch.stack(batch_y_ner)
+
+        return batch_x, batch_y_dx, batch_y_ner
+
 def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int]:
     # utility functions
     def get_converted_icd(icd):
