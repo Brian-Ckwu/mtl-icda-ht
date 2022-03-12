@@ -2,7 +2,7 @@ import torch.nn as nn
 from transformers import BertModel
 
 class BERTDiagnosisNER(nn.Module):
-    def __init__(self, model_name, embed_size, dx_label_size, ner_label_size, loss_weights, ner_ignore_index: int = -100):
+    def __init__(self, model_name: str, embed_size: int, dx_label_size: int, ner_label_size: int, loss_weights: list[float], ner_ignore_index: int = -100):
         super(BERTDiagnosisNER, self).__init__()
         # model
         self.bert = BertModel.from_pretrained(model_name)
@@ -11,6 +11,7 @@ class BERTDiagnosisNER(nn.Module):
         # criterion
         assert len(loss_weights) == 2
         self.loss_weights = loss_weights
+        self.ner_ignore_index = ner_ignore_index
         self.dx_criterion = nn.CrossEntropyLoss(reduction="mean")
         self.ner_criterion = nn.CrossEntropyLoss(reduction="mean", ignore_index=ner_ignore_index)
     
@@ -25,4 +26,4 @@ class BERTDiagnosisNER(nn.Module):
         dx_loss = self.dx_criterion(o_dx, y_dx)
         ner_loss = self.ner_criterion(o_ner.transpose(1, 2), y_ner)
         total_loss = self.loss_weights[0] * dx_loss + self.loss_weights[1] * ner_loss
-        return total_loss
+        return dx_loss, ner_loss, total_loss
