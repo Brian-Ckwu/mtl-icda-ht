@@ -65,14 +65,14 @@ def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int
 
     return indices
 
-def split_by_div(data: Iterable, fold: int, mode: str) -> list:
+def split_by_div(data: Iterable, fold: int, remainder: int, mode: str) -> list:
     data_l = list()
     for i, item in enumerate(data):
         if mode == "train":
-            if i % fold != 0:
+            if i % fold != remainder:
                 data_l.append(item)
         elif mode == "val":
-            if i % fold == 0:
+            if i % fold == remainder:
                 data_l.append(item)
         else:
             raise ValueError("mode should be either train or val")
