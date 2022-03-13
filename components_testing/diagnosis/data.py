@@ -1,11 +1,7 @@
-import json
-from multiprocessing.sharedctypes import Value
 from typing import Iterable
 import torch
 from torch.utils.data import Dataset
 from transformers import BertTokenizerFast
-import pandas as pd
-import numpy as np
 
 class MedicalDiagnosisDataset(Dataset):
     def __init__(self, emrs: list[str], dx_labels: list[int], tokenizer: BertTokenizerFast):

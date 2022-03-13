@@ -18,8 +18,8 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
 
     # some variables
     record = {
-        "train": {"acc": list(), "loss": list()},
-        "val": {"acc": list(), "loss": list()}
+        "acc": list(),
+        "loss": list()
     }
     best_val_acc = 0
     step = 0
@@ -28,7 +28,7 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
         for x, y in train_loader:
             model.train()
             # move data to device
-            move_bert_input_to_device(x, device)
+            x = move_bert_input_to_device(x, device)
             y = y.to(device)
             # make prediction and calculate loss
             pred = model(x)
@@ -55,8 +55,8 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
 def update_evaluation(data_loader, model, criterion, config, device, record, best_acc):
     acc = evaluate_model_acc(data_loader, model, device)
     loss = evaluate_model_loss(data_loader, model, criterion, device)
-    record["val"]["acc"].append(acc)
-    record["val"]["loss"].append(loss)
+    record["acc"].append(acc)
+    record["loss"].append(loss)
     print(f"Acc: {acc:.4f} / Loss: {loss:.4f}")
     if acc > best_acc:
         best_acc = acc

@@ -6,12 +6,12 @@
     "model_config": {
         "model_name": "bert-base-uncased",
         "embed_size": 768,
-        "label_size": 127
-    }, 
+        "label_size": 97
+    },
     "optimizer": "Adam",
     "optimizer_hparams": {
         "lr": 5e-5
     },
     "checkpoint_steps": 100,
-    "model_save_name": "nepochs-10_batchsize-16_fullcode_lr-5e-5"
+    "model_save_name": ""
 }
