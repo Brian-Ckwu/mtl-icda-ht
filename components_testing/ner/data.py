@@ -1,4 +1,5 @@
 import torch
+from typing import Iterable
 from torch.utils.data import Dataset
 from transformers import BertTokenizerFast
 
@@ -47,6 +48,19 @@ class BertBatchCollator(object):
         batch_y = torch.stack(batch_y)
 
         return batch_x, batch_y
+
+def split_by_div(data: Iterable, fold: int, remainder: int, mode: str) -> list:
+    data_l = list()
+    for i, item in enumerate(data):
+        if mode == "train":
+            if i % fold != remainder:
+                data_l.append(item)
+        elif mode == "val":
+            if i % fold == remainder:
+                data_l.append(item)
+        else:
+            raise ValueError("mode should be either train or val")
+    return data_l
 
 def bert_tokens_to_ner_labels(offset_mapping, target_indices, ignore_index: int = -100) -> list[int]:
     offsets = offset_mapping

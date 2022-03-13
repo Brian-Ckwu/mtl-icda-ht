@@ -19,18 +19,17 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
 
     # some variables
     record = {
-        "train": {"loss": list(), "acc": list()},
-        "val": {"loss": list(), "acc": list()}
+        "acc": list(),
+        "loss": list()
     }
     best_val_acc = 0
     step = 0
 
     for epoch in range(1, config["n_epochs"] + 1):
-        print("Training epoch {}:".format(epoch))
-        for x, y in tqdm(train_loader):
+        for x, y in train_loader:
             model.train()
             # move data to device
-            move_bert_input_to_device(x, device)
+            x = move_bert_input_to_device(x, device)
             y = y.to(device)
             # make prediction and calculate loss
             pred = model(x).transpose(1, 2)
@@ -43,36 +42,35 @@ def trainer(train_loader, val_loader, model, criterion, config, device):
             
             # evaluate model at the checkpoint step
             if step % config["checkpoint_steps"] == 0:
-                val_acc = evaluate_model_acc(val_loader, model, device)
-                val_loss = evaluate_model_loss(val_loader, model, criterion, device)
-                record["val"]["acc"].append(val_acc)
-                record["val"]["loss"].append(val_loss)
-                print(f"Step {step}: val acc -> {val_acc:.4f}; val loss -> {val_loss:.4f}")
-                # save best model
-                if val_acc > best_val_acc:
-                    best_val_acc = val_acc
-                    torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
-                    print(f"Best model saved (step = {step}, acc = {val_acc:.4f})")
-            
+                print("Evaluating model at step {}...".format(step))
+                best_val_acc = update_evaluation(val_loader, model, criterion, config, device, record, best_val_acc)            
             step += 1
 
-        
         # evaluate model at the end of one epoch
-        epoch_val_acc = evaluate_model_acc(val_loader, model, device)
-        epoch_val_loss = evaluate_model_loss(val_loader, model, criterion, device)
-        record["val"]["acc"].append(epoch_val_acc)
-        record["val"]["loss"].append(epoch_val_loss)
+        print("===== Evaluating model at epoch {} =====".format(epoch))
+        best_val_acc = update_evaluation(val_loader, model, criterion, config, device, record, best_val_acc)
 
-        # Print evaluation metrics
-        print(f"\n ===== Finish training epoch {epoch}: val acc -> {epoch_val_acc:.4f}; val loss -> {epoch_val_loss:.4f} =====\n")
-
-        if epoch_val_acc > best_val_acc:
-            best_val_acc = epoch_val_acc
-            torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
-            print(f"Best model saved (epoch = {epoch:2d}, acc = {best_val_acc:.4f})")
-    
+    record["best_val_acc"] = best_val_acc
     return record
 
+def update_evaluation(data_loader, model, criterion, config, device, record, best_acc):
+    # utility function
+    def update_record(record, acc, loss):
+        record["acc"].append(acc)
+        record["loss"].append(loss)
+        return record
+    # update metrics
+    acc = evaluate_model_acc(data_loader, model, device)
+    loss = evaluate_model_loss(data_loader, model, criterion, device)
+    record = update_record(record, acc, loss)
+    print(f"Acc: {acc:.4f} / Loss: {loss:.4f}")
+    if acc > best_acc:
+        best_acc = acc
+        if config["model_save_name"]:
+            torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
+            print("Best model saved.")
+
+    return best_acc
 
 def evaluate_model_loss(data_loader, model, criterion, device):
     model.eval()
@@ -85,7 +83,7 @@ def evaluate_model_loss(data_loader, model, criterion, device):
         with torch.no_grad():
             pred = model(x).transpose(1, 2) # transpose for calculating cross entropy loss
             loss = criterion(pred, y)
-        total_val_loss += loss.detach().cpu().item() * len(x["input_ids"])
+        total_val_loss += loss.detach().cpu().item() * y.shape[0]
     
     mean_val_loss = total_val_loss / len(data_loader.dataset)
     return mean_val_loss
