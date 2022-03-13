@@ -53,7 +53,9 @@ def trainer(train_loader: DataLoader, val_loader: DataLoader, model: BERTDiagnos
         print("===== Evaluting model at epoch {} =====".format(epoch))
         record, best_dx_acc, best_ner_acc = update_evaluation(val_loader, model, config, device, record, best_dx_acc, best_ner_acc)
     
-    return record, best_dx_acc, best_ner_acc
+    record["best_dx_acc"] = best_dx_acc
+    record["best_ner_acc"] = best_ner_acc
+    return record
 
 def update_evaluation(data_loader, model, config, device, record, best_dx_acc, best_ner_acc):
     # utility function
@@ -70,6 +72,10 @@ def update_evaluation(data_loader, model, config, device, record, best_dx_acc, b
     print(f"Diagnosis: acc -> {dx_acc:.4f}; loss -> {dx_loss:.4f} / NER: acc -> {ner_acc:.4f}; loss -> {ner_loss:.4f}")
     if dx_acc > best_dx_acc:
         best_dx_acc = dx_acc
+        # save model
+        if config["model_save_name"]:
+            torch.save(model.state_dict(), "./models/{}.pth".format(config["model_save_name"]))
+            print("Best model saved.")
     if ner_acc > best_ner_acc:
         best_ner_acc = ner_acc
 
@@ -109,8 +115,8 @@ def evaluate_model_loss(data_loader, model, device):
             o_dx, o_ner = model(x)
             dx_loss, ner_loss, _ = model.calc_loss(o_dx, y_dx, o_ner, y_ner)
         # accumulate loss
-        total_dx_loss += dx_loss * y_dx.shape[0]
-        total_ner_loss += ner_loss * y_ner.shape[0]
+        total_dx_loss += dx_loss.cpu().detach().item() * y_dx.shape[0]
+        total_ner_loss += ner_loss.cpu().detach().item() * y_ner.shape[0]
     
     mean_dx_loss = total_dx_loss / len(data_loader.dataset)
     mean_ner_loss = total_ner_loss / len(data_loader.dataset)
