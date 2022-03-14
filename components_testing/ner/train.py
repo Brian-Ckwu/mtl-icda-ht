@@ -4,6 +4,7 @@
 import warnings
 import torch
 import torch.nn as nn
+import gc
 import json
 import jsonlines
 from torch.utils.data import DataLoader
@@ -22,12 +23,13 @@ with open("./config.json") as f:
     config = json.load(f)
 
 assert torch.cuda.is_available()
-device = "cuda"
+device = "cuda:0"
 
 same_seeds(config["seed"])
 
-for remainder in range(5):
-    config["model_save_name"] = f"nepochs-10_remainder-{remainder}"
+for remainder in range(config["fold"]):
+    config["model_save_name"] = f"nepochs-{config['n_epochs']}_fold-{config['fold']}_remainder-{remainder}"
+    print(f"\n\n*** Training schedule {remainder + 1} ***")
     """
         Data
     """
@@ -50,6 +52,7 @@ for remainder in range(5):
     # train / val split
     x_train, y_train = [split_by_div(data, config["fold"], remainder, "train") for data in [emrs, whole_indices]]
     x_val, y_val = [split_by_div(data, config["fold"], remainder, "val") for data in [emrs, whole_indices]]
+    print(f"Training samples: {len(x_train)}; Validation samples: {len(x_val)}\n\n")
 
     # prepare dataset
     tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
@@ -74,3 +77,7 @@ for remainder in range(5):
     # save evaluation results
     with open("./eval_results/{}.json".format(config["model_save_name"]), "wt") as f:
         json.dump(record, f)
+
+    ## collect garbage
+    del x_train, y_train, x_val, y_val, train_dataset, val_dataset, train_loader, val_loader, model, record
+    gc.collect()
