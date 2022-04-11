@@ -1,83 +1,155 @@
-"""
-    Import Packages
-"""
+from turtle import update
 import warnings
+import sys
+sys.path.append("/nfs/nas-7.1/ckwu/mtl-icda-ht")
+
+import numpy as np
 import torch
 import torch.nn as nn
-import gc
+import random
 import json
 import jsonlines
+import pickle
+import gc
+
+from argparse import Namespace
+from pathlib import Path
 from torch.utils.data import DataLoader
 from transformers import BertTokenizerFast
 
-from model import BertTokenClassification
-from data import MedicalNERDataset, BertBatchCollator, split_by_div
-from utils import *
+from utilities.data import MedicalNERIOBDataset, split_by_div
+from utilities.utils import set_seeds, load_config, render_exp_name, move_bert_input_to_device
+from utilities.model import BertNERModel, encoder_names_mapping
 
 warnings.filterwarnings("ignore")
 
-"""
-    Configuration
-"""
-with open("./config.json") as f:
-    config = json.load(f)
+def trainer(args: Namespace):
+    print(f"Start training with args:\n{args}")
+    # Configuration
+    set_seeds(args.seed)
 
-assert torch.cuda.is_available()
-device = "cuda:0"
-
-same_seeds(config["seed"])
-
-for remainder in range(config["fold"]):
-    config["model_save_name"] = f"nepochs-{config['n_epochs']}_fold-{config['fold']}_remainder-{remainder}"
-    print(f"\n\n*** Training schedule {remainder + 1} ***")
-    """
-        Data
-    """
-    # load data
+    # Data
     # x: EMR
-    emr_file = "/nfs/nas-7.1/ckwu/datasets/emr/6000/docs_0708.json"
-    emrs = list()
-    with jsonlines.open(emr_file) as f:
-        for doc in f:
-            if doc["annotations"]: # important
-                emrs.append(doc["text"])
+    emr_path = Path(args.emr_path)
+    emrs = pickle.loads(emr_path.read_bytes())
     # y: NER labels
-    label_file = "/nfs/nas-7.1/ckwu/datasets/emr/6000/ner_labels_in_indices.txt"
-    whole_indices = list()
-    with open(label_file) as f:
-        for line in f:
-            indices = set(map(lambda i: int(i), line.split()))
-            whole_indices.append(indices)
+    spans_tuples_path = Path(args.ner_spans_tuples_path)
+    spans_tuples = pickle.loads(spans_tuples_path.read_bytes())
+    # train/val split
+    train_emrs, train_labels = [split_by_div(data, fold=args.fold, remainder=args.remainder, mode="train") for data in [emrs, spans_tuples]]
+    valid_emrs, valid_labels = [split_by_div(data, fold=args.fold, remainder=args.remainder, mode="valid") for data in [emrs, spans_tuples]]
+    # dataset
+    tokenizer = BertTokenizerFast.from_pretrained(encoder_names_mapping[args.tokenizer])
+    train_set = MedicalNERIOBDataset(emrs=train_emrs, spans_tuples=train_labels, tokenizer=tokenizer)
+    valid_set = MedicalNERIOBDataset(emrs=valid_emrs, spans_tuples=valid_labels, tokenizer=tokenizer)
+    # dataloader
+    train_loader = DataLoader(train_set, batch_size=args.bs, shuffle=True, pin_memory=True, collate_fn=train_set.collate_fn)
+    valid_loader = DataLoader(valid_set, batch_size=args.bs, shuffle=True, pin_memory=True, collate_fn=valid_set.collate_fn)
 
-    # train / val split
-    x_train, y_train = [split_by_div(data, config["fold"], remainder, "train") for data in [emrs, whole_indices]]
-    x_val, y_val = [split_by_div(data, config["fold"], remainder, "val") for data in [emrs, whole_indices]]
-    print(f"Training samples: {len(x_train)}; Validation samples: {len(x_val)}\n\n")
+    # Model, Loss, Optimizer, and Scheduler
+    model = BertNERModel(encoder=encoder_names_mapping[args.encoder], num_tags=train_set.num_tags).to(args.device)
+    criterion = nn.CrossEntropyLoss(reduction="mean", ignore_index=train_set.ignore_index)
+    optimizer = getattr(torch.optim, args.optimizer)(model.parameters(), lr=args.lr)
 
-    # prepare dataset
-    tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
-    train_dataset = MedicalNERDataset(emrs=x_train, labels=y_train, tokenizer=tokenizer, ignore_index=-100)
-    val_dataset = MedicalNERDataset(emrs=x_val, labels=y_val, tokenizer=tokenizer, ignore_index=-100)
+    # Optimization
+    # trackers
+    record = {"acc": list(), "loss": list()}
+    best_val_acc = 0
+    step = 0
+    for epoch in range(1, args.nepochs + 1):
+        for x, y in train_loader:
+            model.train()
+            # move data
+            x = move_bert_input_to_device(x, args.device)
+            y = y.to(args.device)
+            # inference
+            scores = model(x)
+            loss = criterion(scores.transpose(1, 2), y)
 
-    # prepare dataloader
-    bert_batch_collator = BertBatchCollator(tokenizer, ignore_index=-100)
-    train_loader = DataLoader(train_dataset, batch_size=config["batch_size"], shuffle=True, pin_memory=True, collate_fn=bert_batch_collator)
-    val_loader = DataLoader(val_dataset, batch_size=config["batch_size"], shuffle=False, pin_memory=True, collate_fn=bert_batch_collator)
+            # back-propagation
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
-    """
-        Model
-    """
-    model = BertTokenClassification(**config["model_config"]).to(device)
-    criterion = nn.CrossEntropyLoss(reduction="mean", ignore_index=-100)
+            # evaluate model at every ckpt
+            if step % args.ckpt_steps == 0:
+                print(f"Evaluating model at step {step}...")
+                best_val_acc = update_evaluation(valid_loader, model, criterion, args, record, best_val_acc)
+            step += 1
+        
+        # evaluate model at each epoch
+        print(f"===== Evaluating model at epoch {epoch} =====")
+        best_val_acc = update_evaluation(valid_loader, model, criterion, args, record, best_val_acc)
 
-    """
-        Optimization
-    """
-    record = trainer(train_loader, val_loader, model, criterion, config, device)
-    # save evaluation results
-    with open("./eval_results/{}.json".format(config["model_save_name"]), "wt") as f:
-        json.dump(record, f)
+    record["best_val_acc"] = best_val_acc
+    return best_val_acc, record
 
-    ## collect garbage
-    del x_train, y_train, x_val, y_val, train_dataset, val_dataset, train_loader, val_loader, model, record
-    gc.collect()
+
+def update_evaluation(data_loader, model, criterion, args, record, best_acc):
+    # utility function
+    def update_record(record, acc, loss):
+        record["acc"].append(acc)
+        record["loss"].append(loss)
+        return record
+    # update metrics
+    acc = evaluate_model_acc(data_loader, model, args.device)
+    loss = evaluate_model_loss(data_loader, model, criterion, args.device)
+    record = update_record(record, acc, loss)
+    print(f"Acc: {acc:.4f} / Loss: {loss:.4f}")
+    if acc > best_acc:
+        best_acc = acc
+        if args.exp_name:
+            torch.save(model.state_dict(), "./models/{}.pth".format(args.exp_name))
+            print("Best model saved.")
+
+    return best_acc
+
+def evaluate_model_loss(data_loader, model, criterion, device):
+    model.eval()
+    total_val_loss = 0
+
+    for x, y in data_loader:
+        # move data to device
+        x = move_bert_input_to_device(x, device)
+        y = y.to(device)
+        with torch.no_grad():
+            pred = model(x).transpose(1, 2) # transpose for calculating cross entropy loss
+            loss = criterion(pred, y)
+        total_val_loss += loss.detach().cpu().item() * y.shape[0]
+    
+    mean_val_loss = total_val_loss / len(data_loader.dataset)
+    return mean_val_loss
+
+def evaluate_model_acc(data_loader, model, device):
+    total_tokens = 0
+    total_correct = 0
+    
+    model.eval()
+    for x, y in data_loader:
+        # inference
+        x = move_bert_input_to_device(x, device)
+        y = y.to(device)
+        with torch.no_grad():
+            pred = model(x) # no need to transpose in this case
+        # calculate target metric (acc)
+        total_tokens += (y != -100).sum().cpu().item()
+        total_correct += (pred.argmax(dim=-1) == y).sum().cpu().item()
+    
+    acc = total_correct / total_tokens
+    return acc
+
+if __name__ == "__main__":
+    config = load_config()
+    args = Namespace(**config)
+    if "cuda" in args.device:
+        assert torch.cuda.is_available()
+    
+    remainders = range(args.fold) # 10
+    for remainder in remainders:
+        args.remainder = remainder
+        args.exp_name = render_exp_name(args, hparams=["encoder", "nepochs", "bs", "lr", "fold", "remainder", "ahocora"])
+        best_metric, train_log = trainer(args)
+        # save best metric
+        metric_path = Path(f"./eval_results/{args.exp_name}.txt")
+        metric_path.write_text(data=str(best_metric))
+        gc.collect()
