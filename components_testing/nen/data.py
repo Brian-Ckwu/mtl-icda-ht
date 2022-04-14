@@ -99,11 +99,11 @@ class BertNENDataset(Dataset):
         return token_indices_l
     
     @staticmethod
-    def make_entities_labels(target_cui: str, negative_cuis: List[str]) -> torch.LongTensor:
+    def make_entities_labels(target_cui: str, negative_cuis: List[str]) -> torch.FloatTensor:
         all_cuis = [target_cui] + negative_cuis
         labels = list()
         for cui in all_cuis:
             label = cui == target_cui
             labels.append(label)
         
-        return torch.LongTensor(labels)
+        return torch.FloatTensor(labels)
