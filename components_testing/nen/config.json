@@ -1,0 +1,25 @@
+{
+    "emr_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/emrs_with_annots.pickle",
+    "ner_spans_l_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/ner_spans_l.pickle",
+    "sm2cui_path": "/nfs/nas-7.1/ckwu/datasets/nen/data/single_mention2cui.json",
+    "smcui2name_path": "/nfs/nas-7.1/ckwu/datasets/umls/smcui2name.json",
+
+    "seed": 42,
+    "fold": 10,
+    "remainder": 0,
+    "emrbs": 1,
+    "cuibs": 32,
+
+    "encoder": "BERT",
+    "tokenizer": "BERT",
+    "optimizer": "Adam",
+    "lr": 2e-5,
+
+    "nepochs": 3,
+    "ckpt_steps": 500,
+    
+    "save_dir": "./models",
+    "exp_name": "",
+    "ckpt_path": "",
+    "device": "cuda:0"
+}
