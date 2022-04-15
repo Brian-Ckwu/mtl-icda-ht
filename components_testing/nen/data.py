@@ -3,7 +3,7 @@ from typing import List, Tuple, Dict
 
 import torch
 from torch.utils.data import Dataset
-from transformers import BertTokenizerFast
+from transformers import BertTokenizerFast, BatchEncoding
 
 class BertNENDataset(Dataset):
     def __init__(
@@ -42,7 +42,7 @@ class BertNENDataset(Dataset):
                 mapped_ner_spans.append(ner_span)
                 cuis.append(self.mention2cui[emr_span])
 
-        be = self.tokenizer(emr, return_offsets_mapping=True)
+        be = self.tokenizer(emr, truncation=True, return_offsets_mapping=True)
         offsets = be.pop("offset_mapping")
         token_indices_l = self.spans_to_token_indices_l(mapped_ner_spans, offsets)
         
@@ -71,7 +71,7 @@ class BertNENDataset(Dataset):
                 negatives.append(random_cui)
         return negatives[:batch_size - 1] # return 'batch_size - 1' (e.g. 15) negative samples
     
-    def make_entities_be(self, cuis: List[str]):
+    def make_entities_be(self, cuis: List[str]) -> BatchEncoding:
         entities = [self.cui2name[cui] for cui in cuis]
         be = self.tokenizer(entities, padding=True, return_tensors="pt")
         return be
@@ -107,3 +107,32 @@ class BertNENDataset(Dataset):
             labels.append(label)
         
         return torch.FloatTensor(labels)
+
+class KBEntities(Dataset):
+    def __init__(self, id2desc: Dict[str, str], tokenizer: BertTokenizerFast):
+        self._id2desc = id2desc
+        self._tokenizer = tokenizer
+        # Make useful properties
+        self._ids = list()
+        self._descs = list()
+        for id_, desc in self._id2desc.items():
+            self._ids.append(id_)
+            self._descs.append(desc)
+        
+        assert len(self._ids) == len(self._descs)
+    
+    def __len__(self):
+        return len(self._ids)
+    
+    def __getitem__(self, idx: int):
+        return self._ids[idx], self._descs[idx]
+    
+    def collate_fn(self, batch):
+        ids = list()
+        descs = list()
+        for id_, desc in batch:
+            ids.append(id_)
+            descs.append(desc)
+
+        ents_be = self._tokenizer(descs, padding=True, return_tensors="pt")
+        return ids, ents_be
