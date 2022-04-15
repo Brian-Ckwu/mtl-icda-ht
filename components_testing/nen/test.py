@@ -1,7 +1,6 @@
 import sys
 sys.path.append("/nfs/nas-7.1/ckwu/mtl-icda-ht")
 
-from tqdm import tqdm
 from argparse import Namespace
 
 import torch
@@ -24,7 +23,7 @@ def fullset_evaluate(data_loader: DataLoader, model: BiEncoder, args: Namespace,
     total_predict = 0
 
     model.eval()
-    for emr_be, mention_indices_l, target_cuis, _ in tqdm(data_loader): # No need of negative_cuis_l
+    for emr_be, mention_indices_l, target_cuis, _ in data_loader: # No need of negative_cuis_l
         emr_be = move_bert_input_to_device(emr_be, args.device)
 
         with torch.no_grad():
