@@ -1,8 +1,10 @@
+from typing import List
+
 import torch.nn as nn
 from transformers import BertModel
 
 class BERTDiagnosisNER(nn.Module):
-    def __init__(self, model_name: str, embed_size: int, dx_label_size: int, ner_label_size: int, loss_weights: list[float], ner_ignore_index: int = -100):
+    def __init__(self, model_name: str, embed_size: int, dx_label_size: int, ner_label_size: int, loss_weights: List[float], ner_ignore_index: int = -100):
         super(BERTDiagnosisNER, self).__init__()
         # model
         self.bert = BertModel.from_pretrained(model_name)
