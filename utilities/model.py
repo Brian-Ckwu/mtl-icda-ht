@@ -59,5 +59,7 @@ class BertDxNERModel(nn.Module):
 encoder_names_mapping = {
     "BERT": "bert-base-uncased",
     "BioBERT": "dmis-lab/biobert-v1.1",
-    "ClinicalBERT": "emilyalsentzer/Bio_ClinicalBERT"
+    "ClinicalBERT": "emilyalsentzer/Bio_ClinicalBERT",
+    "LinkBERT": "michiyasunaga/LinkBERT-base",
+    "BioLinkBERT": "michiyasunaga/BioLinkBERT-base"
 }
