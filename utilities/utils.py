@@ -52,7 +52,7 @@ def visualize_iob_labels(tokenizer, input_ids: list[int], label_ids: list[int], 
         elif label[0] == 'B':
             print(Fore.RED + token, end=' ')
         elif label[0] == 'I':
-            print(Fore.GREEN + token, end=' ')
+            print(Fore.YELLOW + token, end=' ')
 
 def move_bert_input_to_device(x, device):
     for k in x:

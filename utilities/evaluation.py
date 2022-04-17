@@ -6,6 +6,8 @@ from colorama import Fore, Style
 from tqdm import tqdm
 from transformers import BertModel, BertTokenizerFast
 
+from utils import move_bert_input_to_device
+
 def predict_whole_set(model: BertModel, data_loader: DataLoader, device: str) -> list:
     preds = list()
     model.eval()
@@ -16,11 +18,6 @@ def predict_whole_set(model: BertModel, data_loader: DataLoader, device: str) ->
             pred = model(x)
             preds.append(pred)
     return preds
-
-def move_bert_input_to_device(x: dict, device: str) -> dict:
-    for k in x:
-        x[k] = x[k].to(device)
-    return x
         
 def visualize_ner_labels(tokenizer: BertTokenizerFast, input_ids: list[int], ner_labels: list[int]):
     for i, token_id in enumerate(input_ids[0]):
