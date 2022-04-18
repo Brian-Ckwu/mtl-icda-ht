@@ -1,0 +1,19 @@
+{
+    "emr_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/emrs_with_annots.pickle",
+    "ner_spans_l_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/ner_spans_l.pickle",
+
+    "seed": 7,
+    "fold": 10,
+    "remainder": 0,
+    "nepochs": 5,
+    "bs": 16,
+    "encoder": "BioBERT",
+    "tokenizer": "BioBERT",
+    "optimizer": "Adam",
+    "lr": 4e-5,
+    "ckpt_steps": 100,
+
+    "ckpt_path": "/nfs/nas-7.1/ckwu/mtl-icda-ht/components_testing/ner/models/encoder-BioBERT_nepochs-5_bs-16_lr-4e-05_fold-10_remainder-0.pth",
+    "eval_save_dir": "./eval_results/ner",
+    "device": "cuda:0"
+}
