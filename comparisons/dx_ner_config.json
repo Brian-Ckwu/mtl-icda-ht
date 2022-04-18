@@ -1,0 +1,26 @@
+{
+    "emr_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/emrs_with_annots.pickle",
+    "dx_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/dxs_of_emrs_with_annots.pickle",
+    "ner_spans_l_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/ner_spans_l.pickle",
+
+    "seed": 7,
+    "fc": false,
+    "fold": 10,
+    "remainder": 0,
+    "bs": 16,
+    
+    "encoder": "ClinicalBERT",
+    "tokenizer": "BioBERT",
+    "lw": [1.0, 6.0],
+    "optimizer": "Adam",
+    "lr": 4e-5,
+    
+    "nepochs": 10,
+    "ckpt_steps": 100,
+    "separate_update": false,
+    "nersteps": 5,
+
+    "ckpt_path": "/nfs/nas-7.1/ckwu/mtl-icda-ht/multitask_models/diagnosis_ner/models/encoder-ClinicalBERT_fc-False_lw-6.0_lr-4e-05_remainder-0/best_model.ckpt",
+    "eval_save_dir": "./eval_results/dx_ner",
+    "device": "cuda:1"
+}
