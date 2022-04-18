@@ -1,0 +1,19 @@
+{
+    "emr_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/emrs_with_annots.pickle",
+    "dx_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/dxs_of_emrs_with_annots.pickle",
+
+    "seed": 7,
+    "fc": false,
+    "fold": 10,
+    "remainder": 0,
+    "bs": 16,
+    
+    "encoder": "ClinicalBERT",
+    "tokenizer": "BioBERT",
+    "optimizer": "Adam",
+    "lr": 4e-5,
+
+    "ckpt_path": "/nfs/nas-7.1/ckwu/mtl-icda-ht/components_testing/diagnosis/models/encoder-Bio_ClinicalBERT_dx-97_lr-4e-05_remainder-0.pth",
+    "eval_save_dir": "",
+    "device": "cuda:0"
+}
