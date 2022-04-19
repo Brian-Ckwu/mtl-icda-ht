@@ -1,5 +1,7 @@
-*.ipynb
 *.pth
 *pycache*
-eval_results
-models
+*.pyc
+eval_results*
+models*
+*.tsv
+diff_lw_train_logs.pickle
