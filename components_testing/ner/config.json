@@ -1,17 +1,17 @@
 {
+    "emr_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/emrs_with_annots.pickle",
+    "ner_spans_tuples_path": "/nfs/nas-7.1/ckwu/datasets/emr/6000/ner_spans_l.pickle",
+
     "seed": 7,
-    "fold": 5,
-    "n_epochs": 10,
-    "batch_size": 16,
-    "model_config": {
-        "model_name": "bert-base-uncased",
-        "embed_size": 768,
-        "label_size": 2
-    },
+    "fold": 10,
+    "remainder": 0,
+    "nepochs": 5,
+    "bs": 16,
+    "encoder": "BioBERT",
+    "tokenizer": "BioBERT",
     "optimizer": "Adam",
-    "optimizer_hparams": {
-        "lr": 5e-5
-    },
-    "checkpoint_steps": 100,
-    "model_save_name": ""
+    "lr": 4e-5,
+    "ckpt_steps": 100,
+    "exp_name": "",
+    "device": "cuda:0"
 }

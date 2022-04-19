@@ -44,7 +44,7 @@ def trainer(args: Namespace):
     valid_set = MedicalNERIOBDataset(emrs=valid_emrs, spans_tuples=valid_labels, tokenizer=tokenizer)
     # dataloader
     train_loader = DataLoader(train_set, batch_size=args.bs, shuffle=True, pin_memory=True, collate_fn=train_set.collate_fn)
-    valid_loader = DataLoader(valid_set, batch_size=args.bs, shuffle=True, pin_memory=True, collate_fn=valid_set.collate_fn)
+    valid_loader = DataLoader(valid_set, batch_size=args.bs, shuffle=False, pin_memory=True, collate_fn=valid_set.collate_fn)
 
     # Model, Loss, Optimizer, and Scheduler
     model = BertNERModel(encoder=encoder_names_mapping[args.encoder], num_tags=train_set.num_tags).to(args.device)
@@ -147,7 +147,7 @@ if __name__ == "__main__":
     remainders = range(args.fold) # 10
     for remainder in remainders:
         args.remainder = remainder
-        args.exp_name = render_exp_name(args, hparams=["encoder", "nepochs", "bs", "lr", "fold", "remainder", "ahocora"])
+        args.exp_name = render_exp_name(args, hparams=["encoder", "nepochs", "bs", "lr", "fold", "remainder"])
         best_metric, train_log = trainer(args)
         # save best metric
         metric_path = Path(f"./eval_results/{args.exp_name}.txt")
