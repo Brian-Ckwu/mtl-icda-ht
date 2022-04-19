@@ -190,6 +190,10 @@ def trainer(args: Namespace):
 
         pbar.close()
     
+    # TODO: save representations of fullset entities
+    y_ents_all = model.encode_all_entities(entities_loader, args)
+    torch.save(y_ents_all, args.ckpt_path / f"entity_embeddings_{len(y_ents_all)}.pt")
+
     return best_fullset_acc
 
 

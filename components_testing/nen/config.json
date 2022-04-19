@@ -8,18 +8,19 @@
     "fold": 10,
     "remainder": 0,
     "emrbs": 1,
-    "cuibs": 32,
+    "cuibs": 16,
 
     "encoder": "BERT",
     "tokenizer": "BERT",
     "optimizer": "Adam",
-    "lr": 2e-5,
+    "lr": 5e-6,
 
-    "nepochs": 3,
-    "ckpt_steps": 500,
+    "nepochs": 5,
+    "ckpt_steps": 100,
+    "patience": 50,
     
     "save_dir": "./models",
     "exp_name": "",
     "ckpt_path": "",
-    "device": "cuda:0"
+    "device": "cuda:1"
 }

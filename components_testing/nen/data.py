@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Any
 
 import torch
 from torch.utils.data import Dataset
@@ -109,7 +109,7 @@ class BertNENDataset(Dataset):
         return torch.FloatTensor(labels)
 
 class KBEntities(Dataset):
-    def __init__(self, id2desc: Dict[str, str], tokenizer: BertTokenizerFast):
+    def __init__(self, id2desc: Dict[Any, str], tokenizer: BertTokenizerFast):
         self._id2desc = id2desc
         self._tokenizer = tokenizer
         # Make useful properties

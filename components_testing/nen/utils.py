@@ -43,3 +43,7 @@ def evaluate_by_vocab(vocab_path: str, entities_set: Dataset, entity_embeddings:
 
     df = pd.DataFrame(data={"phrase": vocab, "desc_pred": all_desc_preds})    
     return df
+
+def fullset_qualitative_evaluate():
+
+    raise NotImplementedError
