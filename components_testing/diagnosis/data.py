@@ -18,7 +18,7 @@ class MedicalDiagnosisDataset(Dataset):
         emr = self.x[idx]
         dx = self.y[idx]
         # transform
-        x = self.tokenizer(emr, truncation=True, verbose=False).convert_to_tensors(tensor_type="pt", prepend_batch_axis=False)
+        x = self.tokenizer(emr, truncation=True).convert_to_tensors(tensor_type="pt", prepend_batch_axis=False)
         # target transform
         y = torch.LongTensor([dx])        
         return x, y

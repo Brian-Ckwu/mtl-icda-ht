@@ -2,13 +2,16 @@
     Import Packages
 """
 import warnings
-import torch
-import torch.nn as nn
+import sys
 import gc
 import json
 import jsonlines
+from argparse import Namespace
+
+import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader
-from transformers import BertTokenizerFast
+from transformers import AutoTokenizer
 
 from model import BERTClassification
 from data import MedicalDiagnosisDataset, DxBatchCollator, convert_icds_to_indices, split_by_div
@@ -21,17 +24,26 @@ warnings.filterwarnings("ignore")
 """
 with open("./config.json") as f:
     config = json.load(f)
+args = Namespace(**config)
 
 assert torch.cuda.is_available()
-device = "cuda"
+device = args.device
 
-same_seeds(config["seed"])
+same_seeds(args.seed)
 
 """
     Training Loop of Target Hyper-Parameters
 """
-for remainder in range(5):
-    config["model_save_name"] = "labelsize-{}_remainder-{}".format(config["model_config"]["label_size"], remainder)
+def render_model_name(encoder_type, config):
+    config_fields = [
+        f"encoder-{encoder_type}",
+        f"dx-{config['model_config']['label_size']}",
+        f"lr-{config['optimizer_hparams']['lr']}"
+    ]
+    return '_'.join(config_fields)
+
+for remainder in range(10):
+    config["model_save_name"] = f"{render_model_name('Bio_ClinicalBERT', config)}_remainder-{remainder}"
     """
         Data
     """
@@ -51,7 +63,7 @@ for remainder in range(5):
     x_val, y_val = [split_by_div(data, config["fold"], remainder, mode="val") for data in [emrs, dx_labels]]
 
     # make dataset
-    tokenizer = BertTokenizerFast.from_pretrained("bert-base-uncased")
+    tokenizer = AutoTokenizer.from_pretrained("dmis-lab/biobert-v1.1")
     train_dataset = MedicalDiagnosisDataset(x_train, y_train, tokenizer)
     val_dataset = MedicalDiagnosisDataset(x_val, y_val, tokenizer)
 
