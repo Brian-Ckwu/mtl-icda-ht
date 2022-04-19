@@ -9,7 +9,7 @@
     "remainder": 0,
     "bs": 16,
     
-    "encoder": "ClinicalBERT",
+    "encoder": "BioBERT",
     "tokenizer": "BioBERT",
     "lw": [1.0, 6.0],
     "optimizer": "Adam",
@@ -20,7 +20,7 @@
     "separate_update": false,
     "nersteps": 5,
 
-    "ckpt_path": "/nfs/nas-7.1/ckwu/mtl-icda-ht/multitask_models/diagnosis_ner/models/encoder-ClinicalBERT_fc-False_lw-6.0_lr-4e-05_remainder-0/best_model.ckpt",
+    "ckpt_path": "/nfs/nas-7.1/ckwu/mtl-icda-ht/multitask_models/diagnosis_ner/models/encoder-BioBERT_fc-False_lw-6.0_lr-4e-05_remainder-0/best_model.ckpt",
     "eval_save_dir": "./eval_results/dx_ner",
-    "device": "cuda:1"
+    "device": "cuda:0"
 }
