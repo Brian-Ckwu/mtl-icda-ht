@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, List, Set, Tuple, Dict
 from collections import Counter
 
 import torch
@@ -7,7 +7,7 @@ from transformers import BertTokenizerFast
 
 # Dataset classes
 class MedicalDxDataset(Dataset):
-    def __init__(self, emrs: list[str], dx_labels: list[int], tokenizer: BertTokenizerFast):
+    def __init__(self, emrs: List[str], dx_labels: List[int], tokenizer: BertTokenizerFast):
         self.x = emrs
         self.y = dx_labels
         assert len(self.x) == len(self.y)
@@ -27,7 +27,7 @@ class MedicalDxDataset(Dataset):
         return x, y
 
 class MedicalNERDataset(Dataset):
-    def __init__(self, emrs: list[str], labels: list[set[int]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
+    def __init__(self, emrs: List[str], labels: List[Set[int]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
         self.x = emrs
         self.y = labels
         assert len(self.x) == len(self.y)
@@ -48,7 +48,7 @@ class MedicalNERDataset(Dataset):
         return tokenized_x, ner_y
 
 class MedicalNERIOBDataset(Dataset):
-    def __init__(self, emrs: list[str], spans_tuples: list[list[tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
+    def __init__(self, emrs: List[str], spans_tuples: List[List[Tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
         assert len(emrs) == len(spans_tuples)
         self.emrs = emrs
         self.spans_tuples = spans_tuples
@@ -56,13 +56,13 @@ class MedicalNERIOBDataset(Dataset):
         self.tokenizer = tokenizer
         self.ignore_index = ignore_index
         # for label / index conversion
-        self._label2idx = {
+        self._iob2idx = {
             'O': 0,
             'B': 1,
             'I': 2,
             '[PAD]': ignore_index
         }
-        self._idx2label = {idx: label for label, idx in self._label2idx.items()}
+        self._idx2iob = {idx: label for label, idx in self._iob2idx.items()}
     
     def __len__(self):
         return len(self.emrs)
@@ -78,18 +78,18 @@ class MedicalNERIOBDataset(Dataset):
         return emr_be, iob_labels
     
     @property
-    def label2idx(self):
-        return self._label2idx
+    def iob2idx(self):
+        return self._iob2idx
     
     @property
-    def idx2label(self):
-        return self._idx2label
+    def idx2iob(self):
+        return self._idx2iob
     
     @property
     def num_tags(self):
-        return len(self._label2idx) - 1
+        return len(self._iob2idx) - 1
     
-    def bert_offsets_to_iob_labels(self, offsets: list[list[int]], spans: list[tuple[int]], span_dict: dict[tuple, int]):
+    def bert_offsets_to_iob_labels(self, offsets: List[List[int]], spans: List[Tuple[int]], span_dict: Dict[tuple, int]):
         iob_labels = list()
         spans.append((int(1e8), int(1e8))) # add dummy span for convenience
         offsets_it = iter(offsets)
@@ -115,7 +115,7 @@ class MedicalNERIOBDataset(Dataset):
             except StopIteration:
                 break
         
-        iob_labels = [self.label2idx[label] for label in iob_labels]
+        iob_labels = [self.iob2idx[label] for label in iob_labels]
         return iob_labels
     
     def collate_fn(self, batch):
@@ -136,7 +136,7 @@ class MedicalNERIOBDataset(Dataset):
         return batch_x, batch_y
 
 class MedicalDxNERIOBDataset(Dataset):
-    def __init__(self, emrs: list[str], dx_labels: list[int], spans_tuples: list[list[tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
+    def __init__(self, emrs: List[str], dx_labels: List[int], spans_tuples: List[List[Tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
         assert len(emrs) == len(dx_labels) == len(spans_tuples)
         self.emrs = emrs
         self.dx_labels = dx_labels
@@ -183,7 +183,7 @@ class MedicalDxNERIOBDataset(Dataset):
     def num_ner_labels(self):
         return len(self._iob2idx) - 1
     
-    def bert_offsets_to_iob_labels(self, offsets: list[list[int]], spans: list[tuple[int]], span_dict: dict[tuple, int]):
+    def bert_offsets_to_iob_labels(self, offsets: List[List[int]], spans: List[Tuple[int]], span_dict: Dict[tuple, int]):
         iob_labels = list()
         spans.append((int(1e8), int(1e8))) # add dummy span for convenience
         offsets_it = iter(offsets)
@@ -232,7 +232,7 @@ class MedicalDxNERIOBDataset(Dataset):
         return batch_x, batch_ydx, batch_yner
 
 class MTLDiagnosisNERDataset(Dataset):
-    def __init__(self, emrs: list[str], dx_labels: list[int], ner_labels: list[set[int]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
+    def __init__(self, emrs: List[str], dx_labels: List[int], ner_labels: List[Set[int]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
         # data
         self.x = emrs
         self.y_dx = dx_labels
@@ -331,7 +331,7 @@ class DxNERBatchCollator(object):
         return batch_x, batch_y_dx, batch_y_ner
 
 # Utility functions
-def convert_icds_to_indices(icds: list[str], full_code: bool = True) -> list[int]:
+def convert_icds_to_indices(icds: List[str], full_code: bool = True) -> List[int]:
     # utility functions
     def get_converted_icd(icd):
         return str(icd) if full_code else str(icd)[:3]
@@ -367,7 +367,7 @@ def split_by_div(data: Iterable, fold: int, remainder: int, mode: str) -> list:
             raise ValueError("mode should be either train or valid")
     return data_l
 
-def bert_tokens_to_ner_labels(offset_mapping, target_indices, ignore_index: int = -100) -> list[int]:
+def bert_tokens_to_ner_labels(offset_mapping, target_indices, ignore_index: int = -100) -> List[int]:
     offsets = offset_mapping
     ner_labels = list()
     for offset in offsets:

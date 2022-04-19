@@ -1,3 +1,4 @@
+from typing import List
 from argparse import Namespace
 
 import torch.nn as nn
@@ -29,7 +30,7 @@ class BertNERModel(nn.Module):
         return scores
 
 class BertDxNERModel(nn.Module):
-    def __init__(self, encoder: str, dx_label_size: int, ner_label_size: int, loss_weights: list[float], ner_ignore_index: int = -100):
+    def __init__(self, encoder: str, dx_label_size: int, ner_label_size: int, loss_weights: List[float], ner_ignore_index: int = -100):
         super(BertDxNERModel, self).__init__()
         # model
         self.bert = BertModel.from_pretrained(encoder)

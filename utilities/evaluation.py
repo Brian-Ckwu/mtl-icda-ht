@@ -5,6 +5,9 @@ from colorama import Fore, Style
 from tqdm import tqdm
 from typing import List, Tuple
 
+import seqeval.metrics
+from seqeval.scheme import IOB2
+
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertModel, BertTokenizerFast
 
@@ -30,13 +33,16 @@ def predict_whole_set_ner(model: BertModel, data_loader: DataLoader, device: str
     model.to(device)
     model.eval()
     print(f"Predicting whole dataset...")
-    for x, y in tqdm(data_loader):
-        x = move_bert_input_to_device(x, device)
+    for batch in tqdm(data_loader):
+        x = move_bert_input_to_device(batch[0], device)
         with torch.no_grad():
-            scores = model(x)
+            if len(batch) == 2:
+                scores = model(x)
+            if len(batch) > 2:
+                scores = model(x)[1]
             pred = scores.argmax(dim=-1).detach().cpu().tolist()
             y_pred_raw.append(pred)
-        true = y.detach().cpu().tolist()
+        true = batch[-1].detach().cpu().tolist()
         y_true_raw.append(true)
 
     return y_pred_raw, y_true_raw
@@ -59,6 +65,14 @@ def ids_to_iobs(y_pred_raw: List[List[List[int]]], y_true_raw: List[List[List[in
             y_true.append(iob_trues)
                 
     return y_pred, y_true
+
+def calc_seqeval_metrics(y_true, y_pred):
+    token_acc = seqeval.metrics.accuracy_score(y_true, y_pred)
+    p = seqeval.metrics.precision_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
+    r = seqeval.metrics.recall_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
+    f1 = seqeval.metrics.f1_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
+
+    return token_acc, p, r, f1
 
 def visualize_ner_labels(tokenizer: BertTokenizerFast, input_ids: List[int], ner_labels: List[int]):
     for i, token_id in enumerate(input_ids[0]):

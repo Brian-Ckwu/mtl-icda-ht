@@ -1,4 +1,5 @@
 import json
+from typing import Set, List, Dict
 from argparse import Namespace
 
 import torch
@@ -22,7 +23,7 @@ def load_config(config_path: str = "./config.json") -> dict:
         config = json.load(f)
     return config
 
-def render_exp_name(args: Namespace, hparams: list[str]) -> str:
+def render_exp_name(args: Namespace, hparams: List[str]) -> str:
     exp_name_l = list()
     for hparam in hparams:
         value = getattr(args, hparam)
@@ -31,14 +32,14 @@ def render_exp_name(args: Namespace, hparams: list[str]) -> str:
         exp_name_l.append(f"{hparam}-{value}")
     return '_'.join(exp_name_l)
 
-def visualize_ner_indices(emr: str, ner_indices: set[int]):
+def visualize_ner_indices(emr: str, ner_indices: Set[int]):
     for i, char in enumerate(emr):
         if i in ner_indices:
             print(Fore.RED + char, end='')
         else:
             print(Style.RESET_ALL + char, end='')
 
-def visualize_iob_labels(tokenizer, input_ids: list[int], label_ids: list[int], idx2label: dict[int, str]) -> None:
+def visualize_iob_labels(tokenizer, input_ids: List[int], label_ids: List[int], idx2label: Dict[int, str]) -> None:
     assert len(input_ids) == len(label_ids)
     for token_id, label_idx in zip(input_ids, label_ids):
         token = tokenizer.decode(token_id)
