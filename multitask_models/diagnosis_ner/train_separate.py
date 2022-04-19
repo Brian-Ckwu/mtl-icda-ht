@@ -79,7 +79,10 @@ def trainer(args: Namespace):
 
             # back-prop
             optimizer.zero_grad()
-            total_loss.backward()
+            if (nsteps % args.nersteps == 0):
+                total_loss.backward()
+            else:
+                dx_loss.backward()
             optimizer.step()
 
             # evaluate model every k steps
@@ -141,14 +144,17 @@ def evaluate_and_save(data_loader, model, args, train_log):
 if __name__ == "__main__":
     config = json.loads(Path("./config.json").read_bytes())
     args = Namespace(**config)
-    assert args.separate_update == False
+    assert args.separate_update
 
     # fix seed
     set_seeds(args.seed)
+    # args.exp_name = render_exp_name(args, hparams=["encoder", "fc", "lw", "nersteps", "lr", "remainder"])
+    # train_log = trainer(args)
+    # print(f"\n\n******* Finish training remainder={args.remainder} (Best ACC: dx={train_log.best_dx_acc:.3f}; ner={train_log.best_ner_acc:.3f}) *******\n\n")
 
-    for r in range(10):
+    for r in range(1, 10): # XXX: for nersteps == 5
         args.remainder = r
         print(f"\n\n******* Now training with remainder={r} *******\n\n")
-        args.exp_name = render_exp_name(args, hparams=["encoder", "fc", "lw", "lr", "remainder"])
+        args.exp_name = render_exp_name(args, hparams=["encoder", "fc", "lw", "nersteps", "lr", "remainder"])
         train_log = trainer(args)
         print(f"\n\n******* Finish training remainder={r} (Best ACC: dx={train_log.best_dx_acc:.3f}; ner={train_log.best_ner_acc:.3f}) *******\n\n")
