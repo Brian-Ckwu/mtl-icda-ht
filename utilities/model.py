@@ -2,12 +2,12 @@ from typing import List
 from argparse import Namespace
 
 import torch.nn as nn
-from transformers import BertModel
+from transformers import BertModel, AutoModel
 
 class BertDxModel(nn.Module):
     def __init__(self, model_name, embed_size, label_size):
         super(BertDxModel, self).__init__()
-        self.bert = BertModel.from_pretrained(model_name)
+        self.bert = AutoModel.from_pretrained(model_name, local_files_only=True)
         self.fc = nn.Linear(embed_size, label_size)
     
     def forward(self, x):
