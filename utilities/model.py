@@ -10,12 +10,17 @@ class BertDxModel(nn.Module):
         self.bert = AutoModel.from_pretrained(encoder_name, local_files_only=True)
         self.embed_dim = self.bert.embeddings.word_embeddings.embedding_dim
         self.fc = nn.Linear(self.embed_dim, num_dxs)
+
+        self.criterion = nn.CrossEntropyLoss(reduction="mean")
     
     def forward(self, x):
         h = self.bert(**x).last_hidden_state
         cls_h = h[:, 0, :]
-        pred = self.fc(cls_h)
-        return pred
+        scores = self.fc(cls_h)
+        return scores
+    
+    def calc_loss(self, scores, labels):
+        return self.criterion(scores, labels)
 
 class BertNERModel(nn.Module):
     def __init__(self, encoder: str, num_tags: int):
