@@ -5,10 +5,11 @@ import torch.nn as nn
 from transformers import BertModel, AutoModel
 
 class BertDxModel(nn.Module):
-    def __init__(self, model_name, embed_size, label_size):
+    def __init__(self, encoder_name, num_dxs):
         super(BertDxModel, self).__init__()
-        self.bert = AutoModel.from_pretrained(model_name, local_files_only=True)
-        self.fc = nn.Linear(embed_size, label_size)
+        self.bert = AutoModel.from_pretrained(encoder_name, local_files_only=True)
+        self.embed_dim = self.bert.embeddings.word_embeddings.embedding_dim
+        self.fc = nn.Linear(self.embed_dim, num_dxs)
     
     def forward(self, x):
         h = self.bert(**x).last_hidden_state
