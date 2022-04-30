@@ -3,13 +3,13 @@ import pandas as pd
 import sklearn.metrics
 from colorama import Fore, Style
 from tqdm import tqdm
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 import seqeval.metrics
 from seqeval.scheme import IOB2
 
 from torch.utils.data import Dataset, DataLoader
-from transformers import BertModel, BertTokenizerFast
+from transformers import BertModel, BertTokenizerFast, AutoTokenizer
 
 from .utils import move_bert_input_to_device
 
@@ -22,7 +22,7 @@ def predict_whole_set_dx(model: BertModel, data_loader: DataLoader, device: str)
         x = move_bert_input_to_device(batch[0], device)
         with torch.no_grad():
             pred = model(x)
-            if len(pred) > 1:
+            if len(batch) > 2:
                 pred = pred[0]
             preds.append(pred)
     return torch.cat(preds, dim=0)
@@ -84,6 +84,19 @@ def visualize_ner_labels(tokenizer: BertTokenizerFast, input_ids: List[int], ner
             print(Style.RESET_ALL + token, end=' ')
         else:
             print(Fore.RED + token, end=' ')
+
+def visualize_iobpol_labels(tokenizer: AutoTokenizer, input_ids: List[int], ner_labels: List[int], label_color_mappings: Dict[int, str]) -> None:
+    for i, token_id in enumerate(input_ids):
+        token = tokenizer.decode(token_id)
+        
+        # post-processing
+        if token[:2] == "##":
+            token = token[2:]
+            print('\b', end='')
+        
+        # print with different color
+        color = label_color_mappings[ner_labels[i]]
+        print(color + token, end=' ')
 
 def get_top_k_accuracies(y_true, y_scores, k, labels):
     accs = list()
