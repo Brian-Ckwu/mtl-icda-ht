@@ -68,5 +68,6 @@ encoder_names_mapping = {
     "BioBERT": "dmis-lab/biobert-v1.1",
     "ClinicalBERT": "emilyalsentzer/Bio_ClinicalBERT",
     "LinkBERT": "michiyasunaga/LinkBERT-base",
-    "BioLinkBERT": "michiyasunaga/BioLinkBERT-base"
+    "BioLinkBERT": "michiyasunaga/BioLinkBERT-base",
+    "RoBERTa": "roberta-base"
 }
