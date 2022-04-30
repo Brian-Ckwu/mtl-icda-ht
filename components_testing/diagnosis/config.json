@@ -7,16 +7,17 @@
     "fold": 10,
     "remainder": 0,
     
-    "encoder": "BioLinkBERT",
-    "tokenizer": "BioLinkBERT",
+    "encoder": "RoBERTa",
+    "tokenizer": "RoBERTa",
     "optimizer": "Adam",
-    "lr": 3e-5,
+    "lr": 2e-5,
     
-    "nepochs": 10,
+    "nepochs": 15,
     "bs": 16,
     "grad_accum_steps": 2,
     "ckpt_steps": 50,
 
+    "wandb": true,
     "save_dir": "./models",
     "exp_name": "",
     "ckpt_path": "",
