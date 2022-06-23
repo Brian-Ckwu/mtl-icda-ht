@@ -11,21 +11,8 @@ from seqeval.scheme import IOB2
 from torch.utils.data import Dataset, DataLoader
 from transformers import BertModel, BertTokenizerFast, AutoTokenizer
 
+from .model import BertDxModel
 from .utils import move_bert_input_to_device
-
-def predict_whole_set_dx(model: BertModel, data_loader: DataLoader, device: str) -> list:
-    preds = list()
-    model.to(device)
-    model.eval()
-    print(f"Predicting whole dataset...")
-    for batch in tqdm(data_loader):
-        x = move_bert_input_to_device(batch[0], device)
-        with torch.no_grad():
-            pred = model(x)
-            if len(batch) > 2:
-                pred = pred[0]
-            preds.append(pred)
-    return torch.cat(preds, dim=0)
 
 def predict_whole_set_ner(model: BertModel, data_loader: DataLoader, device: str) -> list:
     y_pred_raw = list()
@@ -66,13 +53,13 @@ def ids_to_iobs(y_pred_raw: List[List[List[int]]], y_true_raw: List[List[List[in
                 
     return y_pred, y_true
 
-def calc_seqeval_metrics(y_true, y_pred):
+def calc_seqeval_metrics(y_true, y_pred) -> Dict[str, float]:
     token_acc = seqeval.metrics.accuracy_score(y_true, y_pred)
     p = seqeval.metrics.precision_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
     r = seqeval.metrics.recall_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
     f1 = seqeval.metrics.f1_score(y_true, y_pred, average="micro", mode="strict", scheme=IOB2)
 
-    return token_acc, p, r, f1
+    return {"token_acc": token_acc, "p": p, "r": r, "f1": f1}
 
 def visualize_ner_labels(tokenizer: BertTokenizerFast, input_ids: List[int], ner_labels: List[int]):
     for i, token_id in enumerate(input_ids[0]):
@@ -123,3 +110,53 @@ def get_evaluations(y_true, y_pred, label_size, model_outputs, model_name: str) 
         },
         index=[model_name]
     )
+
+def predict_whole_set_dx(model: BertDxModel, data_loader: DataLoader, device: str) -> list:
+    preds = list()
+    model.to(device)
+    model.eval()
+    for batch in tqdm(data_loader):
+        x = move_bert_input_to_device(batch[0], device)
+        with torch.no_grad():
+            pred = model(x)
+            if len(batch) > 2:
+                pred = pred[0]
+            preds.append(pred)
+    return torch.cat(preds, dim=0)
+
+def evaluate_dx_model(model: BertDxModel, eval_loader: DataLoader, device: str) -> Dict[str, Any]:
+    # collect output logits and labels
+    logits = list()
+    y_true = list()
+    model = model.to(device)
+    model.eval()
+    for X, y in eval_loader:
+        X = move_bert_input_to_device(X, device)
+        with torch.no_grad():
+            logit = model(X)
+            logits.append(logit)
+        y_true += y.tolist()
+    
+    logits = torch.cat(logits, dim=0)
+    y_pred = logits.argmax(dim=-1).tolist()
+
+    # calculate metrics
+    return {
+        "macro_f1": sklearn.metrics.f1_score(y_true, y_pred, average="macro"),
+        "micro_f1": sklearn.metrics.f1_score(y_true, y_pred, average="micro"),
+        "cohen_kappa": sklearn.metrics.cohen_kappa_score(y_true, y_pred),
+        "mcc": sklearn.metrics.matthews_corrcoef(y_true, y_pred),
+        "hat3": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=3, labels=range(eval_loader.dataset.num_dx_labels)),
+        "hat5": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=5, labels=range(eval_loader.dataset.num_dx_labels)),
+        "hat8": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=8, labels=range(eval_loader.dataset.num_dx_labels))
+    }
+
+
+pollabel_color_mappings = {
+    0: Style.RESET_ALL,
+    1: Fore.GREEN,
+    2: Fore.CYAN,
+    3: Fore.RED,
+    4: Fore.YELLOW,
+    -100: Style.RESET_ALL
+}
