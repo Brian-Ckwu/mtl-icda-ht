@@ -1,5 +1,7 @@
 import json
-from typing import Set, List, Dict
+import pickle
+from typing import Any, Set, List, Dict
+from pathlib import Path
 from argparse import Namespace
 
 import torch
@@ -22,6 +24,15 @@ def load_config(config_path: str = "./config.json") -> dict:
     with open(config_path) as f:
         config = json.load(f)
     return config
+
+def load_args(config_path: str) -> Namespace:
+    return Namespace(**json.loads(Path(config_path).read_bytes()))
+
+def load_json(path: str) -> Any:
+    return json.loads(Path(path).read_bytes())
+
+def load_pickle(path: str) -> Any:
+    return pickle.loads(Path(path).read_bytes())
 
 def render_exp_name(args: Namespace, hparams: List[str]) -> str:
     exp_name_l = list()
