@@ -31,6 +31,14 @@ def load_args(config_path: str) -> Namespace:
 def load_json(path: str) -> Any:
     return json.loads(Path(path).read_bytes())
 
+def load_jsonl(path: str) -> List[dict]:
+    dict_l = list()
+    with open(path) as f:
+        for line in f:
+            d = json.loads(line.rstrip())
+            dict_l.append(d)
+    return dict_l
+
 def load_pickle(path: str) -> Any:
     return pickle.loads(Path(path).read_bytes())
 
