@@ -1,5 +1,7 @@
+import sys
 import json
 import pickle
+import logging
 from typing import Any, Set, List, Dict
 from pathlib import Path
 from argparse import Namespace
@@ -19,6 +21,19 @@ def set_seeds(seed):
         torch.cuda.manual_seed_all(seed)  
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+
+def get_logger(name: str = __name__):
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = logging.StreamHandler(stream=sys.stdout)
+    logger = logging.getLogger(name)
+
+    ch.setLevel(logging.DEBUG)
+    ch.setFormatter(formatter)
+
+    logger.addHandler(ch)
+    logger.setLevel(logging.DEBUG)
+
+    return logger
 
 def load_config(config_path: str = "./config.json") -> dict:
     with open(config_path) as f:
@@ -42,14 +57,14 @@ def load_jsonl(path: str) -> List[dict]:
 def load_pickle(path: str) -> Any:
     return pickle.loads(Path(path).read_bytes())
 
-def render_exp_name(args: Namespace, hparams: List[str]) -> str:
+def render_exp_name(args: Namespace, hparams: List[str], sep: str) -> str:
     exp_name_l = list()
     for hparam in hparams:
         value = getattr(args, hparam)
         if hparam == "lw":
             value = value[1]
         exp_name_l.append(f"{hparam}-{value}")
-    return '_'.join(exp_name_l)
+    return sep.join(exp_name_l)
 
 def visualize_ner_indices(emr: str, ner_indices: Set[int]):
     for i, char in enumerate(emr):
