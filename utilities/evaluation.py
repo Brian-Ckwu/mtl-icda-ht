@@ -2,7 +2,7 @@ import torch
 import pandas as pd
 import sklearn.metrics
 from colorama import Fore, Style
-from tqdm import tqdm
+from tqdm.auto import tqdm
 from typing import List, Tuple, Dict, Any
 
 import seqeval.metrics
@@ -124,13 +124,13 @@ def predict_whole_set_dx(model: BertDxModel, data_loader: DataLoader, device: st
             preds.append(pred)
     return torch.cat(preds, dim=0)
 
-def evaluate_dx_model(model: BertDxModel, eval_loader: DataLoader, device: str) -> Dict[str, Any]:
+def evaluate_dx_model(model: BertDxModel, eval_loader: DataLoader, device: str, verbose: bool = False) -> Dict[str, Any]:
     # collect output logits and labels
     logits = list()
     y_true = list()
     model = model.to(device)
     model.eval()
-    for X, y in eval_loader:
+    for X, y in tqdm(eval_loader) if verbose else eval_loader:
         X = move_bert_input_to_device(X, device)
         with torch.no_grad():
             logit = model(X)
