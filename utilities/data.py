@@ -26,6 +26,21 @@ class MedicalDxDataset(Dataset):
         y = torch.LongTensor([dx])        
         return x, y
 
+    def collate_fn(self, batch):
+        batch_x = list()
+        batch_y = torch.LongTensor()
+
+        for x, y in batch:
+            batch_x.append(x)
+            batch_y = torch.cat(tensors=(batch_y, y), dim=0)
+        batch_x = self.tokenizer.pad(batch_x)
+
+        return batch_x, batch_y
+
+    @property
+    def num_dx_labels(self):
+        return len(Counter(self.y))
+
 class MedicalNERDataset(Dataset):
     def __init__(self, emrs: List[str], labels: List[Set[int]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
         self.x = emrs
@@ -46,6 +61,24 @@ class MedicalNERDataset(Dataset):
         # target transform
         ner_y = torch.LongTensor(bert_tokens_to_ner_labels(offset_mapping, label, self.ignore_index))
         return tokenized_x, ner_y
+
+    def collate_fn(self, batch):
+        batch_x, batch_y = list(), list()
+
+        for x, y in batch:
+            batch_x.append(x)
+            batch_y.append(y)
+
+        batch_x = self.tokenizer.pad(batch_x)
+
+        dim_after_padding = batch_x["input_ids"].shape[1]
+        for i in range(len(batch_y)):
+            to_fill_length = dim_after_padding - batch_y[i].shape[0]
+            padding = torch.ones(to_fill_length, dtype=torch.long) * self.ignore_index
+            batch_y[i] = torch.cat((batch_y[i], padding), dim=0)
+        batch_y = torch.stack(batch_y)
+
+        return batch_x, batch_y
 
 class MedicalNERIOBDataset(Dataset):
     def __init__(self, emrs: List[str], spans_tuples: List[List[Tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
@@ -141,7 +174,8 @@ class MedicalIOBPOLDataset(Dataset):
             text_l: List[str], 
             ner_spans_l: List[Dict[Tuple, int]], 
             tokenizer: AutoTokenizer, 
-            ignore_index: int = -100
+            ignore_index: int = -100,
+            return_offsets: bool = False
         ):
         assert len(text_l) == len(ner_spans_l)
 
@@ -149,6 +183,7 @@ class MedicalIOBPOLDataset(Dataset):
         self.ner_spans_l = ner_spans_l
         self.tokenizer = tokenizer
         self.ignore_index = ignore_index
+        self.return_offsets = return_offsets
         # for label / index conversion
         self.span_labels = {0: None, 1: "POS", 2: "NEG"}
         self.iob2idx = {
@@ -170,8 +205,12 @@ class MedicalIOBPOLDataset(Dataset):
         span_pol_dict = self.ner_spans_l[idx]
         # convert span labels to token labels
         text_be = self.tokenizer(text, truncation=True, return_offsets_mapping=True).convert_to_tensors(tensor_type="pt", prepend_batch_axis=False)
-        offsets = text_be.pop("offset_mapping").tolist()
+        if self.return_offsets:
+            offsets = text_be["offset_mapping"].tolist()
+        else:    
+            offsets = text_be.pop("offset_mapping").tolist()
         iob_labels = self.bert_offsets_to_iob_labels(offsets, span_pol_dict)
+
         return text_be, iob_labels
     
     @property
@@ -219,6 +258,8 @@ class MedicalIOBPOLDataset(Dataset):
             batch_x.append(x)
             batch_y.append(y)
 
+        if self.return_offsets:
+            batch_offsets = [x.pop("offset_mapping").tolist() for x in batch_x]
         batch_x = self.tokenizer.pad(batch_x)
 
         dim_after_padding = batch_x["input_ids"].shape[1]
@@ -228,7 +269,7 @@ class MedicalIOBPOLDataset(Dataset):
             batch_y[i] = torch.cat((torch.LongTensor(batch_y[i]), padding), dim=0)
         batch_y = torch.stack(batch_y)
 
-        return batch_x, batch_y
+        return (batch_x, batch_y, batch_offsets) if self.return_offsets else (batch_x, batch_y)
 
 class MedicalDxNERIOBDataset(Dataset):
     def __init__(self, emrs: List[str], dx_labels: List[int], spans_tuples: List[List[Tuple[int]]], tokenizer: BertTokenizerFast, ignore_index: int = -100):
