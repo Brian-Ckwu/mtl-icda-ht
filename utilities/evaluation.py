@@ -137,7 +137,7 @@ def evaluate_dx_model(model: BertDxModel, eval_loader: DataLoader, device: str) 
             logits.append(logit)
         y_true += y.tolist()
     
-    logits = torch.cat(logits, dim=0)
+    logits = torch.cat(logits, dim=0).cpu()
     y_pred = logits.argmax(dim=-1).tolist()
 
     # calculate metrics
@@ -146,9 +146,9 @@ def evaluate_dx_model(model: BertDxModel, eval_loader: DataLoader, device: str) 
         "micro_f1": sklearn.metrics.f1_score(y_true, y_pred, average="micro"),
         "cohen_kappa": sklearn.metrics.cohen_kappa_score(y_true, y_pred),
         "mcc": sklearn.metrics.matthews_corrcoef(y_true, y_pred),
-        "hat3": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=3, labels=range(eval_loader.dataset.num_dx_labels)),
-        "hat5": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=5, labels=range(eval_loader.dataset.num_dx_labels)),
-        "hat8": sklearn.metrics.top_k_accuracy_score(y_true, y_pred, k=8, labels=range(eval_loader.dataset.num_dx_labels))
+        "hat3": sklearn.metrics.top_k_accuracy_score(y_true, logits, k=3, labels=range(eval_loader.dataset.num_dx_labels)),
+        "hat5": sklearn.metrics.top_k_accuracy_score(y_true, logits, k=5, labels=range(eval_loader.dataset.num_dx_labels)),
+        "hat8": sklearn.metrics.top_k_accuracy_score(y_true, logits, k=8, labels=range(eval_loader.dataset.num_dx_labels))
     }
 
 
