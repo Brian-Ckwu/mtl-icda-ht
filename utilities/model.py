@@ -36,7 +36,7 @@ class BertNERModel(nn.Module):
         return scores
 
 class BertDxNERModel(nn.Module):
-    def __init__(self, encoder: str, dx_label_size: int, ner_label_size: int, loss_weights: List[float], ner_ignore_index: int = -100):
+    def __init__(self, encoder: str, dx_label_size: int, ner_label_size: int, loss_weights: List[float] = [1, 1], ner_ignore_index: int = -100):
         super(BertDxNERModel, self).__init__()
         # model
         self.bert = BertModel.from_pretrained(encoder)
@@ -57,9 +57,15 @@ class BertDxNERModel(nn.Module):
         o_ner = self.ner_layer(H)
         return o_dx, o_ner
     
+    def calc_dx_loss(self, o_dx, y_dx):
+        return self.dx_criterion(o_dx, y_dx)
+    
+    def calc_ner_loss(self, o_ner, y_ner):
+        return self.ner_criterion(o_ner.transpose(1, 2), y_ner)
+    
     def calc_loss(self, o_dx, y_dx, o_ner, y_ner):
-        dx_loss = self.dx_criterion(o_dx, y_dx)
-        ner_loss = self.ner_criterion(o_ner.transpose(1, 2), y_ner)
+        dx_loss = self.calc_dx_loss(o_dx, y_dx)
+        ner_loss = self.calc_ner_loss(o_ner, y_ner)
         total_loss = self.loss_weights[0] * dx_loss + self.loss_weights[1] * ner_loss
         return dx_loss, ner_loss, total_loss
 
@@ -69,5 +75,6 @@ encoder_names_mapping = {
     "ClinicalBERT": "emilyalsentzer/Bio_ClinicalBERT",
     "LinkBERT": "michiyasunaga/LinkBERT-base",
     "BioLinkBERT": "michiyasunaga/BioLinkBERT-base",
-    "RoBERTa": "roberta-base"
+    "RoBERTa": "roberta-base",
+    "PubMedBERT": "microsoft/BiomedNLP-PubMedBERT-base-uncased-abstract-fulltext"
 }
