@@ -46,5 +46,5 @@ def augment_samples_with_partials(emrs: List[str], spans_l: List[List[List[int]]
             augmented_emrs.append(partial_emr)
             augmented_dxs.append(dx)
     
-    assert len(augmented_emrs) == len(augmented_dxs) == len(dxs) * 2
+    assert len(augmented_emrs) == len(augmented_dxs) == len(dxs) * n_partials
     return augmented_emrs, augmented_dxs
