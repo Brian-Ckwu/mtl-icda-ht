@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 
+import wandb
+
 from utils import move_bert_input_to_device
 
 class ICDATrainer(object):
@@ -24,6 +26,7 @@ class ICDATrainer(object):
             logger: logging.Logger,
             args: Namespace
         ):
+        # attributes
         self.model = model
         self.train_set = train_set
         self.valid_set = valid_set
@@ -35,6 +38,7 @@ class ICDATrainer(object):
         self.args = args
 
         # configuration
+        # path config
         self.exp_path = Path(args.exp_path)
         self.exp_path.mkdir(parents=True, exist_ok=True)
         self.train_losses_path = self.exp_path / "train_losses.csv"
@@ -44,6 +48,13 @@ class ICDATrainer(object):
         self.best_metric_path = self.exp_path / "best_metrics.json"
         self.best_models_path = self.exp_path / "best_models"
         self.best_models_path.mkdir(parents=True, exist_ok=True)
+        # wandb config
+        self.wandb = wandb
+        self.wandb.init(
+            project=args.project_name,
+            name=args.exp_name,
+            config={hparam: getattr(args, hparam) for hparam in args.exp_hparams}
+        )
 
     def train(self):
         # prepare dataloader
@@ -83,19 +94,21 @@ class ICDATrainer(object):
                 if (loader_idx % self.args.grad_accum_steps == self.args.grad_accum_steps - 1) or (loader_idx == len(train_loader) - 1):
                     self.optimizer.step()
                     self.optimizer.zero_grad()
-                    # logging
-                    pbar.set_description(f"Step loss: {step_loss:.3f}")
+                    # log training loss
                     train_losses.append(step_loss)
-                    with self.train_losses_path.open(mode="at") as f:
+                    pbar.set_description(f"Step loss: {step_loss:.3f}") # terminal
+                    with self.train_losses_path.open(mode="at") as f: # local file
                         f.write(f"{step},{step_loss}\n")
+                    self.wandb.log({"train_loss": step_loss}, step=step) # wandb
 
                     # evaluate during training
                     if (step % self.args.eval_every_k_steps == 0) or (loader_idx == len(train_loader) - 1):
                         pbar.set_description(f"Evaluating...")
                         metrics = self.eval_func(model=self.model, eval_loader=valid_loader, device=self.args.device)
-                        with self.train_log_path.open(mode="at") as f:
+                        # log eval metrics
+                        with self.train_log_path.open(mode="at") as f: # local file
                             f.write(','.join([str(step)] + [str(metrics[k]) for k in self.args.log_metrics]) + '\n')
-
+                        self.wandb.log(metrics, step=step)
 
                         # save the best models (for every metric)
                         for metric_name in self.args.log_metrics:
@@ -112,4 +125,6 @@ class ICDATrainer(object):
 
             pbar.close()
 
-        return 
+        for metric_name in self.args.log_metrics:
+            self.wandb.run.summary[f"best_{metric_name}"] = best_metrics[metric_name]
+        self.wandb.finish(exit_code=0)
