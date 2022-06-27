@@ -21,20 +21,16 @@ def build_label2id_mapping(labels: list) -> Dict[Any, int]:
 
     return label2id
 
-def make_partial(emr: str, spans: List[List[int]], prop: float) -> str:
-    if len(spans) == 0:
-        return emr
+def augment_full_emrs_with_partials(emrs: List[str], spans_l: List[List[List[int]]], dxs: List[Any], n_partials: int) -> Tuple[List[str], List[Any]]:
     
-    end_span_idx = math.floor(len(spans) * prop)
-    try:
+    def make_partial(emr: str, spans: List[List[int]], prop: float) -> str:
+        if len(spans) == 0:
+            return emr
+        
+        end_span_idx = math.floor(len(spans) * prop)
         end_offset = spans[end_span_idx][1]
-    except:
-        print(emr)
-        print(spans)
-        print(end_span_idx)
-    return emr[:end_offset]
-
-def augment_samples_with_partials(emrs: List[str], spans_l: List[List[List[int]]], dxs: List[Any], n_partials: int) -> Tuple[List[str], List[Any]]:
+        return emr[:end_offset]
+    
     assert len(emrs) ==  len(spans_l) == len(dxs)
     augmented_emrs = emrs.copy()
     augmented_dxs = dxs.copy()
@@ -48,3 +44,45 @@ def augment_samples_with_partials(emrs: List[str], spans_l: List[List[List[int]]
     
     assert len(augmented_emrs) == len(augmented_dxs) == len(dxs) * n_partials
     return augmented_emrs, augmented_dxs
+
+def augment_extracted_emrs_with_partials(docs: List[Dict[str, Any]], dxs: List[Any], n_partials: int, intype: str) -> Tuple[List[List[str]], List[List[int]], List[Any]]:
+    assert len(docs) == len(dxs)
+    entities_l = [doc[intype] for doc in docs]
+    pols_l = [doc["pols"] for doc in docs] # 0 == positive; 1 == negative
+    augmented_dxs = dxs.copy()
+
+    for partial_idx in range(1, n_partials):
+        prop = partial_idx / n_partials
+        for entities, pols, dx in zip(entities_l, pols_l, dxs):
+            assert len(entities) == len(pols)
+            # build partial input
+            end_entity_idx = math.floor(len(pols) * prop)
+            partial_entities = entities[:end_entity_idx + 1]
+            partial_pols = pols[:end_entity_idx + 1]
+            # add to training samples
+            entities_l.append(partial_entities)
+            pols_l.append(partial_pols)
+            augmented_dxs.append(dx)
+
+    assert len(entities_l) == len(pols_l) == len(augmented_dxs)
+    return entities_l, pols_l, augmented_dxs
+
+def preprocess_extracted_emrs(entities_l: List[List[str]], pols_l: List[List[int]], scheme: str = "every") -> List[str]:
+    assert len(entities_l) == len(pols_l)
+    X = list()
+    # add "positive" ro "negative" before every entity
+    if scheme == "every":
+        for entities, pols in zip(entities_l, pols_l):
+            pol_ent_l = list()
+            for ent, pol in zip(entities, pols):
+                if pol == 0:
+                    pol_name = "positive"
+                elif pol == 1:
+                    pol_name = "negative"
+                else:
+                    raise ValueError("pol should be either 0 or 1")
+                pol_ent_l.append(f"{pol_name} {ent}")
+            pol_ent_text = ' '.join(pol_ent_l)
+            X.append(pol_ent_text)
+
+    return X
