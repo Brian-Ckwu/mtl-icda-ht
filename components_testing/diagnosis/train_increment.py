@@ -13,7 +13,7 @@ import torch.nn as nn
 from transformers import AutoTokenizer
 
 from utilities.utils import set_seeds, render_exp_name, load_args, load_pickle, load_jsonl, get_logger
-from utilities.preprocess import select_labels_subset, build_label2id_mapping, augment_samples_with_partials
+from utilities.preprocess import augment_extracted_emrs_with_partials, preprocess_extracted_emrs, select_labels_subset, build_label2id_mapping, augment_full_emrs_with_partials
 from utilities.data import MedicalDxDataset
 from utilities.model import BertDxModel, encoder_names_mapping
 from utilities.trainer import ICDATrainer
@@ -63,9 +63,15 @@ def main():
     X_train, X_valid, eX_train, eX_valid, y_train, y_valid = train_test_split(emrs, extracted_emrs, label_ids, train_size=args.train_size, test_size=args.test_size, random_state=args.seed, stratify=label_ids)
 
     # partial augmentation of train_set
-    if args.n_partials > 1:
+    if args.intype == "full":
         train_spans_l = [eX_train[i]["spans"] for i in range(len(eX_train))]
-        X_train, y_train = augment_samples_with_partials(emrs=X_train, spans_l=train_spans_l, dxs=y_train, n_partials=args.n_partials)
+        X_train, y_train = augment_full_emrs_with_partials(emrs=X_train, spans_l=train_spans_l, dxs=y_train, n_partials=args.n_partials)
+    elif args.intype in ["terms", "concepts"]:
+        ents_l_train, pols_l_train, y_train = augment_extracted_emrs_with_partials(docs=eX_train, dxs=y_train, n_partials=args.n_partials, intype=args.intype)
+        ents_l_valid, pols_l_valid, y_valid = augment_extracted_emrs_with_partials(docs=eX_valid, dxs=y_valid, n_partials=1, intype=args.intype) # NOTE: no incremental evaluation during tarining
+        X_train = preprocess_extracted_emrs(ents_l_train, pols_l_train, args.scheme)
+        X_valid = preprocess_extracted_emrs(ents_l_valid, pols_l_valid, args.scheme)
+        logger.info(f"Train size: {len(X_train)}; Valid size: {len(X_valid)}")
 
     # build datasets
     tokenizer = AutoTokenizer.from_pretrained(encoder_names_mapping[args.tokenizer], use_fast=True)
